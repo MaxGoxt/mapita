@@ -35,6 +35,13 @@ class _MapViewState extends State<MapView> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    final viewModel = Provider.of<LocationViewModel>(context, listen: false);
+    viewModel.startLocationUpdates(_mapController);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<LocationViewModel>(
       builder: (context, viewModel, child) {

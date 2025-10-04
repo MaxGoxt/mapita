@@ -20,7 +20,9 @@ class LocationViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    Position? position = await _locationService.getCurrentPosition().timeout(const Duration(seconds: 30));
+    Position? position = await _locationService.getCurrentPosition().timeout(
+      const Duration(seconds: 30),
+    );
 
     if (position != null) {
       _location = [
@@ -34,13 +36,17 @@ class LocationViewModel extends ChangeNotifier {
           point: LatLng(position.latitude, position.longitude),
           width: 40,
           height: 40,
-          child: const Icon(Icons.person_pin_circle_rounded, color: Color.fromARGB(255, 7, 28, 161), size: 40),
+          child: const Icon(
+            Icons.person_pin_circle_rounded,
+            color: Color.fromARGB(255, 7, 28, 161),
+            size: 40,
+          ),
         ),
       ];
+      notifyListeners();
     }
 
     _isLoading = false;
-    notifyListeners();
   }
 
   void updateLocation(double latitude, double longitude) {
@@ -71,17 +77,28 @@ class LocationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startLocationUpdates() {
+  void startLocationUpdates(MapController mapController) {
     Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 10,
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
       ),
     ).listen((Position position) {
       _location[0] = LocationModel(
         latitude: position.latitude,
         longitude: position.longitude,
       );
+      _markers[0] = Marker(
+        point: LatLng(position.latitude, position.longitude),
+        width: 40,
+        height: 40,
+        child: const Icon(
+          Icons.person_pin_circle_rounded,
+          color: Color.fromARGB(255, 7, 28, 161),
+          size: 40,
+        ),
+      );
+      mapController.move(LatLng(position.latitude, position.longitude), 20);
       notifyListeners();
     });
   }
