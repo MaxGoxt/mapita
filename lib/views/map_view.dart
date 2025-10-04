@@ -3,9 +3,36 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/location_viewmodel.dart';
+import 'package:geocoding/geocoding.dart';
 
-class MapView extends StatelessWidget {
+class MapView extends StatefulWidget {
   const MapView({super.key});
+
+  @override
+  State<MapView> createState() => _MapViewState();
+}
+
+class _MapViewState extends State<MapView> {
+  final TextEditingController _searchController = TextEditingController();
+  final MapController _mapController = MapController();
+
+  Future<void> _searchLocation(LocationViewModel viewModel) async {
+    final query = _searchController.text;
+    if (query.isEmpty) return;
+
+    try {
+      List<Location> locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        final loc = locations.first;
+        viewModel.updateLocation(loc.latitude, loc.longitude);
+        _mapController.move(LatLng(loc.latitude, loc.longitude), 16);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Endereço não encontrado')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,36 +44,58 @@ class MapView extends StatelessWidget {
 
         final location = viewModel.location;
 
-        if (location == null) {
+        if (location.isEmpty) {
           return const Center(
             child: Text('Não foi possível obter a localização.'),
           );
         }
 
-        return FlutterMap(
-          options: MapOptions(
-            initialCenter: LatLng(location.latitude, location.longitude),
-            initialZoom: 16,
-          ),
+        return Column(
           children: [
-            TileLayer(
-              urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              subdomains: const ['a', 'b', 'c'],
-              userAgentPackageName: 'br.edu.ifsul.flutter_mapas_osm',
-            ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: LatLng(location.latitude, location.longitude),
-                  width: 40,
-                  height: 40,
-                  child: const Icon(
-                    Icons.location_pin,
-                    color: Colors.red,
-                    size: 40,
+            // Barra de busca
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Digite um endereço',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(50)),
+                        ),
+                        suffix: IconButton(
+                          icon: Icon(Icons.search),
+                          onPressed: () => _searchLocation(viewModel),
+                        ),
+                      ),
+                    ),
                   ),
+                ],
+              ),
+            ),
+            // Mapa
+            Expanded(
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: LatLng(
+                    location[0].latitude,
+                    location[0].longitude,
+                  ),
+                  initialZoom: 16,
                 ),
-              ],
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    subdomains: const ['a', 'b', 'c'],
+                    userAgentPackageName: 'uy.com.mapa.mapita',
+                  ),
+                  MarkerLayer(markers: viewModel.markers),
+                ],
+              ),
             ),
           ],
         );
